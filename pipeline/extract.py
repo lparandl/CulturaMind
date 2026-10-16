@@ -9,10 +9,13 @@ Pages with almost no extractable text but with images are flagged as likely scan
 """
 import argparse
 import csv
+import glob
 import hashlib
 import json
+import os
 import re
 import sys
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 import pymupdf
@@ -25,8 +28,9 @@ MIN_CHARS_PER_PAGE = 50  # below this a page is treated as "no text layer"
 def clean_text(text: str) -> str:
     text = normalize(text)
     text = text.replace("­", "")                  # soft hyphens
-    text = re.sub(r"-\n(\w)", r"\1", text)             # re-join hyphenated line breaks
     text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r" *\n *", "\n", text)                # trim lines (scans indent with spaces)
+    text = re.sub(r"(\w)-\n(\w)", r"\1\2", text)         # re-join words hyphenated at line breaks
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
 
@@ -48,14 +52,48 @@ def strip_repeated_lines(pages: list[str]) -> list[str]:
     ]
 
 
-def extract_pdf(path: Path) -> dict:
+def _ocr_chunk(job: tuple) -> dict:
+    """OCR a list of pages of one PDF with Tesseract (runs in a worker process)."""
+    path, numbers, lang, dpi = job
+    if "TESSDATA_PREFIX" not in os.environ:  # e.g. /usr/share/tesseract-ocr/5/tessdata (4.00 on older systems)
+        found = sorted(glob.glob("/usr/share/tesseract-ocr/*/tessdata"))
+        if found:
+            os.environ["TESSDATA_PREFIX"] = found[-1]
+    out = {}
+    with pymupdf.open(path) as doc:
+        for n in numbers:
+            page = doc[n]
+            tp = page.get_textpage_ocr(language=lang, dpi=dpi, full=True)
+            out[n] = page.get_text("text", textpage=tp, sort=True)
+    return out
+
+
+def ocr_pages(path: Path, numbers: list[int], lang: str, dpi: int = 300) -> dict:
+    workers = max(1, (os.cpu_count() or 2) - 1)
+    chunks = [numbers[i::workers * 4] for i in range(workers * 4) if numbers[i::workers * 4]]
+    results: dict = {}
+    with ProcessPoolExecutor(workers) as pool:
+        for done, part in enumerate(pool.map(_ocr_chunk, [(str(path), c, lang, dpi) for c in chunks]), 1):
+            results.update(part)
+            print(f"   OCR {len(results)}/{len(numbers)} pages", end="\r", flush=True)
+    print()
+    return results
+
+
+def extract_pdf(path: Path, ocr_lang: str | None = None) -> dict:
     doc = pymupdf.open(path)
-    pages, scanned_pages = [], 0
+    pages, scanned = [], []
     for page in doc:
         text = page.get_text("text", sort=True)
         if len(text.strip()) < MIN_CHARS_PER_PAGE and page.get_images():
-            scanned_pages += 1
+            scanned.append(page.number)
         pages.append(text)
+    scanned_pages = len(scanned)
+    ocr_done = []
+    if ocr_lang and scanned:
+        for n, text in ocr_pages(path, scanned, ocr_lang).items():
+            pages[n] = text
+        ocr_done = scanned
     pages = [clean_text(p) for p in strip_repeated_lines(pages)]
     fixed = False
     if detect_language("\n".join(pages)) in ("fa", "mixed"):
@@ -70,7 +108,8 @@ def extract_pdf(path: Path) -> dict:
         "sha1": hashlib.sha1(path.read_bytes()).hexdigest(),
         "n_pages": n_pages,
         "scanned_pages": scanned_pages,
-        "needs_ocr": n_pages > 0 and scanned_pages / n_pages > 0.3,
+        "ocr_pages": len(ocr_done),
+        "needs_ocr": n_pages > 0 and (scanned_pages - len(ocr_done)) / n_pages > 0.3,
         "language": detect_language(full),
         "visual_order_fixed": fixed,
         "metadata": meta,
@@ -83,6 +122,8 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("pdf_dir", type=Path)
     ap.add_argument("out_dir", type=Path)
+    ap.add_argument("--ocr", nargs="?", const="eng+fas", metavar="LANGS",
+                    help="OCR pages without a text layer using Tesseract (default languages: eng+fas)")
     ap.add_argument("--txt", action="store_true", help="also write a plain .txt copy of each document for reading")
     args = ap.parse_args()
 
@@ -95,7 +136,7 @@ def main() -> None:
     rows, seen_hashes = [], {}
     for path in pdfs:
         try:
-            rec = extract_pdf(path)
+            rec = extract_pdf(path, args.ocr)
         except Exception as e:  # corrupt / encrypted files shouldn't stop the batch
             print(f"FAILED  {path.name}: {e}")
             rows.append({"file": path.name, "status": f"error: {e}"})
@@ -114,7 +155,7 @@ def main() -> None:
                 (texts_dir / f"{path.stem}.txt").write_text(body, encoding="utf-8")
         rows.append({
             "file": path.name, "status": status, "pages": rec["n_pages"],
-            "scanned_pages": rec["scanned_pages"], "chars": len(rec["text"]),
+            "scanned_pages": rec["scanned_pages"], "ocr_pages": rec["ocr_pages"], "chars": len(rec["text"]),
             "language": rec["language"], "visual_order_fixed": rec["visual_order_fixed"],
             "title": rec["metadata"].get("title", ""),
         })
@@ -122,7 +163,7 @@ def main() -> None:
               + ("  [fixed reversed Persian]" if rec["visual_order_fixed"] else ""))
 
     with open(args.out_dir / "extraction_summary.csv", "w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=["file", "status", "pages", "scanned_pages", "chars", "language",
+        w = csv.DictWriter(f, fieldnames=["file", "status", "pages", "scanned_pages", "ocr_pages", "chars", "language",
                                           "visual_order_fixed", "title"])
         w.writeheader()
         w.writerows(rows)
