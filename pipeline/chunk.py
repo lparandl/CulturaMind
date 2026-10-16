@@ -1,0 +1,59 @@
+"""Optional: split extracted documents into passages so analyze.py can rank sections, not whole books.
+
+Usage:
+    python chunk.py <out_dir> <chunk_out_dir> [--words 1500] [--keep-all]
+    python analyze.py <chunk_out_dir> ...
+
+Consecutive pages are grouped until a passage reaches about --words words. Front/back matter,
+index and blank pages are skipped unless --keep-all is given. Each passage is written as its own
+record in <chunk_out_dir>/texts/, named "<document> p<first>-<last>".
+"""
+import argparse
+import json
+from pathlib import Path
+
+from textnorm import detect_language
+from validate import page_type
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("out_dir", type=Path)
+    ap.add_argument("chunk_dir", type=Path)
+    ap.add_argument("--words", type=int, default=1500)
+    ap.add_argument("--keep-all", action="store_true")
+    args = ap.parse_args()
+
+    dest = args.chunk_dir / "texts"
+    dest.mkdir(parents=True, exist_ok=True)
+    total = 0
+    for path in sorted((args.out_dir / "texts").glob("*.json")):
+        rec = json.loads(path.read_text(encoding="utf-8"))
+        buf, start = [], None
+
+        def flush(end):
+            nonlocal buf, start, total
+            if buf:
+                text = "\n\n".join(buf)
+                name = f"{Path(rec['file']).stem} p{start}-{end}"
+                (dest / f"{name}.json").write_text(json.dumps({
+                    "file": name, "source": rec["file"], "first_page": start, "last_page": end,
+                    "n_pages": end - start + 1, "needs_ocr": False, "language": detect_language(text),
+                    "metadata": {"title": rec["metadata"].get("title", "")}, "pages": buf, "text": text,
+                }, ensure_ascii=False), encoding="utf-8")
+                total += 1
+            buf, start = [], None
+
+        for n, page in enumerate(rec["pages"], 1):
+            if not args.keep_all and page_type(page, n - 1, rec["n_pages"]) != "body":
+                continue
+            start = start or n
+            buf.append(page)
+            if sum(len(p.split()) for p in buf) >= args.words:
+                flush(n)
+        flush(rec["n_pages"])
+    print(f"Wrote {total} passages to {dest}")
+
+
+if __name__ == "__main__":
+    main()
