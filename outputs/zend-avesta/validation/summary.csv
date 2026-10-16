@@ -1,0 +1,4 @@
+file,pages,body_pages,blank_pages,words,valid_word_rate_body,noise_rate_body,flagged_pages,reference,reference_similarity
+Zend-Avesta Part I - Vendidad.pdf,382,323,5,108505,0.969,0.0033,6,The Zend-Avesta Part I-Avesta Vendidad Translation_extracted.txt (0 words),0.0
+"Zend-Avesta Part II - Sirozahs, Yasts and Nyayis.pdf",406,359,16,92188,0.963,0.0021,10,"The Zend-Avesta Part II- The Sirozahs, Yasts and Nyayis_extracted.txt (92,945 words)",0.981
+"Zend-Avesta Part III - Yasna, Visparad, Afrinagan, Gahs.pdf",496,422,19,142363,0.968,0.0021,8,"The Zend-Avesta Part III- The Yasna, Visparad, Afrinagan, Gahs, and Miscellaneous Fragments_extracted.txt (143,589 words)",0.975

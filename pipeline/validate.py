@@ -142,12 +142,12 @@ def write_review(args, recs, pq, vdir: Path) -> None:
         pick = sorted(rnd.sample(pages, min(args.sample, len(pages))))
         doc = pymupdf.open(args.pdf_dir / r["file"])
         for p in pick:
-            png = doc[p - 1].get_pixmap(dpi=90).tobytes("png")
+            img = doc[p - 1].get_pixmap(dpi=90).tobytes("jpeg", jpg_quality=70)
             row = pq[(pq.file == r["file"]) & (pq.page == p)].iloc[0]
             parts.append(
                 f"<div class=pg><div><h2>{html.escape(r['file'])} — page {p}</h2>"
                 f"<p class=m>valid-word rate {row.valid_word_rate} · noise {row.noise_rate} · {row.flag or 'ok'}</p>"
-                f"<img src='data:image/png;base64,{base64.b64encode(png).decode()}'></div>"
+                f"<img src='data:image/jpeg;base64,{base64.b64encode(img).decode()}'></div>"
                 f"<pre>{html.escape(r['pages'][p - 1])}</pre></div>")
         doc.close()
     (vdir / "review.html").write_text("\n".join(parts), encoding="utf-8")

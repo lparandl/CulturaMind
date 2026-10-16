@@ -8,13 +8,14 @@ Pages with almost no extractable text but with images are flagged as likely scan
 (those need OCR before analysis).
 """
 import argparse
-import os
-from concurrent.futures import ProcessPoolExecutor
 import csv
+import glob
 import hashlib
 import json
+import os
 import re
 import sys
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 import pymupdf
@@ -54,7 +55,10 @@ def strip_repeated_lines(pages: list[str]) -> list[str]:
 def _ocr_chunk(job: tuple) -> dict:
     """OCR a list of pages of one PDF with Tesseract (runs in a worker process)."""
     path, numbers, lang, dpi = job
-    os.environ.setdefault("TESSDATA_PREFIX", "/usr/share/tesseract-ocr/5/tessdata")
+    if "TESSDATA_PREFIX" not in os.environ:  # e.g. /usr/share/tesseract-ocr/5/tessdata (4.00 on older systems)
+        found = sorted(glob.glob("/usr/share/tesseract-ocr/*/tessdata"))
+        if found:
+            os.environ["TESSDATA_PREFIX"] = found[-1]
     out = {}
     with pymupdf.open(path) as doc:
         for n in numbers:

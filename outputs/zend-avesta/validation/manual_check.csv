@@ -1,0 +1,4 @@
+file,pdf_page,printed_page,words_checked,word_errors,checked_by,notes
+Zend-Avesta Part I - Vendidad.pdf,251,149,170,0,Claude (read from page image),"Gâthas read as Gathas twice; stray marks at line starts"
+"Zend-Avesta Part II - Sirozahs, Yasts and Nyayis.pdf",262,246,190,2,Claude (read from page image),"mav for may; 1 for I; footnote markers glued to words; footnotes garbled"
+"Zend-Avesta Part III - Yasna, Visparad, Afrinagan, Gahs.pdf",286,234,170,1,Claude (read from page image),"ii. for 11.; accents lost in Urvâkhshaya and Keresâspa; superscript 1 read as l"
