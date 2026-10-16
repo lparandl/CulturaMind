@@ -32,13 +32,22 @@ from textnorm import detect_language, tokens
 NOISE_RE = re.compile(r"[^\w\s.,;:!?'\"()\[\]\-–—‘’“”/&%§*…‌]", re.UNICODE)
 
 
+CATALOGUE_RE = re.compile(r"\b(?:fcap|8vo|4to|svo|cloth|stitched|Clarendon Press|Second Edition)\b|\b\d+s\. ?\d*d\.",
+                          re.IGNORECASE)
+INDEX_LINE_RE = re.compile(r",\s*\d+[,.;]?$")  # index entries end in page numbers: "Mithra, 119, 136."
+
+
 def page_type(text: str, n: int, n_pages: int) -> str:
     words = text.split()
     if len(words) < 20:
         return "blank/figure"
+    lines = [l.strip() for l in text.splitlines() if l.strip()]
     digits = sum(c.isdigit() for c in text) / max(len(text), 1)
-    if digits > 0.12 and n > n_pages * 0.8:
+    index_lines = sum(len(l) < 90 and bool(INDEX_LINE_RE.search(l)) for l in lines) / max(len(lines), 1)
+    if n > n_pages * 0.6 and (index_lines > 0.3 or digits > 0.12):
         return "index"
+    if len(CATALOGUE_RE.findall(text)) >= 4:
+        return "publisher catalogue"
     if n < n_pages * 0.04 or n > n_pages * 0.97:
         return "front/back matter"
     return "body"

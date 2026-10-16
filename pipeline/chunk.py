@@ -5,10 +5,13 @@ Usage:
     python analyze.py <chunk_out_dir> ...
 
 Consecutive pages are grouped until a passage reaches about --words words. Front/back matter,
-index and blank pages are skipped unless --keep-all is given. Each passage is written as its own
-record in <chunk_out_dir>/texts/, named "<document> p<first>-<last>".
+index and blank pages, and pages flagged by validate.py, are skipped unless --keep-all is given.
+Each passage is written as its own
+record in <chunk_out_dir>/texts/,
+named "<document> p<first>-<last>".
 """
 import argparse
+import csv
 import json
 from pathlib import Path
 
@@ -27,9 +30,15 @@ def main() -> None:
     dest = args.chunk_dir / "texts"
     dest.mkdir(parents=True, exist_ok=True)
     total = 0
+    # Pages that failed validate.py (tables of special characters, covers, garbled OCR) are skipped too.
+    qfile = args.out_dir / "validation" / "page_quality.csv"
+    flagged = set()
+    if qfile.exists() and not args.keep_all:
+        with open(qfile, encoding="utf-8") as f:
+            flagged = {(r["file"], int(r["page"])) for r in csv.DictReader(f) if r["flag"]}
     for path in sorted((args.out_dir / "texts").glob("*.json")):
         rec = json.loads(path.read_text(encoding="utf-8"))
-        buf, start = [], None
+        buf, start, last = [], None, None
 
         def flush(end):
             nonlocal buf, start, total
@@ -45,13 +54,15 @@ def main() -> None:
             buf, start = [], None
 
         for n, page in enumerate(rec["pages"], 1):
-            if not args.keep_all and page_type(page, n - 1, rec["n_pages"]) != "body":
+            if not args.keep_all and (page_type(page, n - 1, rec["n_pages"]) != "body"
+                                      or (rec["file"], n) in flagged):
+                flush(last)  # never let a passage run across skipped pages
                 continue
-            start = start or n
+            start, last = start or n, n
             buf.append(page)
             if sum(len(p.split()) for p in buf) >= args.words:
                 flush(n)
-        flush(rec["n_pages"])
+        flush(last)
     print(f"Wrote {total} passages to {dest}")
 
 
