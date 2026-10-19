@@ -1,6 +1,6 @@
 # Gathas: Zend-Avesta Part III (Mills) vs Azargoshasb
 
-October 19, 2026. Outputs are in [`outputs/gathas/comparison/`](../outputs/gathas/comparison/). Script: [`pipeline/compare_gathas.py`](../pipeline/compare_gathas.py).
+October 19, 2026. The outputs are in this folder. Script: [`compare_gathas.py`](../compare_gathas.py).
 
 ## Answer
 
