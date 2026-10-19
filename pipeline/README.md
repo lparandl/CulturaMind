@@ -7,7 +7,7 @@
     python chunk.py    <out_dir> <passage_dir> [--words 1500]          # optional
     python analyze.py  <passage_dir or out_dir> [--brief brief.txt] [--select 20] [--diversity 0.3]
 
-`compare_gathas.py` compares two translations of the Gathas verse by verse (see `docs/gathas-comparison.md`).
+`corpora/religion/gathas/compare_gathas.py` compares two translations of the Gathas verse by verse. Its results are in `corpora/religion/gathas/comparison/`.
 
 Or run `CulturaMind_pipeline.ipynb` in Google Colab on PDFs stored in Google Drive.
 A full worked example on the three Zend-Avesta volumes is in `docs/zend-avesta-report.md`,

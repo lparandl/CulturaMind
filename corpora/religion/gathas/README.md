@@ -15,9 +15,9 @@ No part of this publication may be reproduced in any form for commercial purpose
 the public domain. Keep this credit with the file, and do not use it commercially.
 
 The same chapters, in L. H. Mills' 1887 translation, are in `../zend-avesta/` Part III.
-`docs/gathas-comparison.md` compares the two.
+`comparison/README.md` compares the two. The script is `compare_gathas.py` in this folder, and its outputs are in `comparison/`.
 
 Reproduce:
 
     python pipeline/extract.py corpora/religion/gathas outputs/gathas --txt
-    python pipeline/compare_gathas.py "outputs/zend-avesta/texts/Zend-Avesta Part III - Yasna, Visparad, Afrinagan, Gahs.json" "corpora/religion/gathas/Translation of Gathas - The Holy Songs Of Zarathushtra (Azargoshasb).pdf" outputs/gathas/comparison
+    python corpora/religion/gathas/compare_gathas.py "outputs/zend-avesta/texts/Zend-Avesta Part III - Yasna, Visparad, Afrinagan, Gahs.json" "corpora/religion/gathas/Translation of Gathas - The Holy Songs Of Zarathushtra (Azargoshasb).pdf" corpora/religion/gathas/comparison
