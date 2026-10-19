@@ -11,4 +11,4 @@ Public-domain translations (1880–1887). Extracted text and validation results 
 
 Reproduce:
 
-    python pipeline/extract.py pdfs/zend-avesta out --txt --ocr eng
+    python pipeline/extract.py corpora/religion/zend-avesta out --txt --ocr eng
