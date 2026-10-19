@@ -9,7 +9,7 @@ with the PDF(s) and a README giving the translator, edition, page count, text la
 | `philosophical-intellectual/` | Philosophical and intellectual texts |
 | `mass-media/` | Mass media and literary works |
 
-This repository is public. Only add texts that are in the public domain or openly licensed.
+This repository is public. Only add texts that are in the public domain or whose terms allow sharing, and record those terms in the text's README.
 Keep in-copyright translations out of the repository.
 
 Run the pipeline on one text folder, for example:
