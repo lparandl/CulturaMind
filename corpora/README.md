@@ -1,4 +1,4 @@
-# Corpora: Digital library of Persian cultural texts (Aim 1)
+# Corpora: Digital library of Persian cultural texts
 
 Source texts for the digital library, grouped by category. Each text has its own folder
 with the PDF(s) and a README giving the translator, edition, page count, text layer and copyright status.
@@ -9,8 +9,6 @@ with the PDF(s) and a README giving the translator, edition, page count, text la
 | `philosophical-intellectual/` | Philosophical and intellectual texts |
 | `mass-media/` | Mass media and literary works |
 
-This repository is public. Only add texts that are in the public domain or whose terms allow sharing, and record those terms in the text's README.
-Keep in-copyright translations out of the repository.
 
 Run the pipeline on one text folder, for example:
 
